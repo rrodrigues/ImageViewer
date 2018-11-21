@@ -1,5 +1,7 @@
 #include "Tools.h"
 
+#include "Viewer.h"
+
 #include <QMouseEvent>
 #include <QDebug>
 #include <QPainter>
@@ -11,7 +13,7 @@ class MoveTool : public Tool
 public:
     QCursor cursor() const override { return QCursor(Qt::ClosedHandCursor); }
 
-    QPointF mouseMoveEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
 };
 
 class SelectionTool : public Tool
@@ -24,6 +26,11 @@ public:
     void keyPressEvent(QKeyEvent *event) const override;
 };
 
+void Tool::setViewer(Viewer *viewer)
+{
+    mViewer = viewer;
+}
+
 void Tool::mousePressEvent(QMouseEvent* event)
 {
     mRect.setTopLeft(event->localPos());
@@ -35,10 +42,9 @@ void Tool::mouseReleaseEvent(QMouseEvent*)
     mRect.setRect(0, 0, 0, 0);
 }
 
-QPointF Tool::mouseMoveEvent(QMouseEvent* event)
+void Tool::mouseMoveEvent(QMouseEvent* event)
 {
     mRect.setBottomRight(event->localPos());
-    return QPointF();
 }
 
 void Tool::paintEvent(QPainter* , QRectF , float ) const
@@ -49,7 +55,7 @@ void Tool::keyPressEvent(QKeyEvent *) const
 {
 }
 
-QPointF MoveTool::mouseMoveEvent(QMouseEvent *event)
+QPointF Tool::getDeltaMoviment(QMouseEvent* event)
 {
     QPointF tl = mRect.bottomRight();
     Tool::mouseMoveEvent(event);
@@ -57,9 +63,16 @@ QPointF MoveTool::mouseMoveEvent(QMouseEvent *event)
     return QPointF(mRect.width(), mRect.height());
 }
 
+void MoveTool::mouseMoveEvent(QMouseEvent *event)
+{
+    QPointF delta = getDeltaMoviment(event);
+    if (mViewer) {
+        mViewer->translate(delta);
+    }
+}
+
 void SelectionTool::paintEvent(QPainter *pPainter, QRectF drawRect, float scale) const
 {
-
     if (pPainter == nullptr) {
         return;
     }

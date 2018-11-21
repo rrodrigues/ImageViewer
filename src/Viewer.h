@@ -12,6 +12,9 @@ class Viewer : public QOpenGLWidget
 public:
     Viewer(QWidget* parent);
 
+    void setTool(Tool* tool);
+    inline Tool* tool() const { return mTool; }
+
     void setImage(QImage image);
     inline QImage image() const { return mImage; }
 
@@ -25,6 +28,8 @@ public:
     void zoomOut();
     void zoomToFit();
     void resetZoom();
+
+    void translate(QPointF t);
 
 protected:
     void paintEvent(QPaintEvent *event) override;

@@ -14,6 +14,8 @@
 #include <QAction>
 #include <QSettings>
 #include <QMenuBar>
+#include <QMouseEvent>
+
 
 namespace {
 
@@ -28,6 +30,14 @@ QToolButton* createToolButton(QWidget* parent, QAction* action, QString iconPath
     QToolButton* button = new QToolButton(parent);
     button->setDefaultAction(action);
     button->setIcon(QIcon(iconPath));
+    return button;
+}
+
+QToolButton* createToolButton(QWidget* parent, QString tooltip, QString iconPath, std::function<void()> slot) {
+    QToolButton* button = new QToolButton(parent);
+    button->setToolTip(tooltip);
+    button->setIcon(QIcon(iconPath));
+    QObject::connect(button, &QToolButton::clicked, slot);
     return button;
 }
 
@@ -137,8 +147,6 @@ void ImageViewer::saveWindowState() const
 {
     QSettings settings;
     settings.setValue("ImageViewer/geometry_" + windowTitle(), saveGeometry());
-    settings.setValue("ImageViewer/tools_visible_" + windowTitle(), mToolsWidget->isVisible());
-    settings.setValue("ImageViewer/info_visible_" + windowTitle(), mInfo->isVisible());
 }
 
 void ImageViewer::showEvent(QShowEvent * event)
@@ -149,8 +157,32 @@ void ImageViewer::showEvent(QShowEvent * event)
 
 void ImageViewer::closeEvent(QCloseEvent *event)
 {
-    QWidget::closeEvent(event);
     saveWindowState();
+    QWidget::closeEvent(event);
+}
+
+void ImageViewer::mousePressEvent(QMouseEvent * event)
+{
+    QWidget::mousePressEvent(event);
+
+    Tool* tool = mViewer->tool();
+    if (tool == nullptr) {
+        if (event->modifiers() == (Qt::ControlModifier | Qt::ShiftModifier)) {
+            tool = Tools::selection();
+        } else if (event->modifiers() == Qt::ControlModifier) {
+            tool = Tools::move();
+        }
+        mViewer->setTool(tool);
+        if (tool) {
+            tool->mousePressEvent(event);
+        }
+    }
+}
+
+void ImageViewer::mouseReleaseEvent(QMouseEvent * event)
+{
+    QWidget::mouseReleaseEvent(event);
+    mViewer->setTool(nullptr);
 }
 
 void ImageViewer::createActions()
@@ -191,12 +223,14 @@ void ImageViewer::createMenus()
     view->addAction(mZoomtoFitAction);
 
     QLayout* toolLayout = mToolsWidget->layout();
-    QToolButton* moveButtom = createToolButton(mToolsWidget, "Move", ":/images/move.png");
-    connect(moveButtom, &QAbstractButton::clicked, [=](){ mViewer->setCursor(Tools::move()->cursor()); });
-    toolLayout->addWidget(moveButtom);
-    QToolButton* rulerButtom = createToolButton(mToolsWidget, "Ruler", ":/images/ruler.png");
-    rulerButtom->setVisible(false);
-    toolLayout->addWidget(rulerButtom);
+
+    toolLayout->addWidget(createToolButton(mToolsWidget, "", ":/images/cursor.png", [=](){
+        mViewer->setTool(nullptr);
+    }));
+    toolLayout->addWidget(createToolButton(mToolsWidget, "Move", ":/images/move.png", [=]() {
+        mViewer->setTool(Tools::move());
+    }));
+    toolLayout->addWidget(createToolButton(mToolsWidget, "Ruler", ":/images/ruler.png"));
 
     toolLayout->addWidget(createToolButton(mToolsWidget, mZoomInAction, ":/images/zoom-in.png"));
     toolLayout->addWidget(createToolButton(mToolsWidget, mZoomOutAction, ":/images/zoom-out.png"));
@@ -207,11 +241,13 @@ void ImageViewer::createMenus()
 void ImageViewer::toogleTools()
 {
     mToolsWidget->setVisible(!mToolsWidget->isVisible());
+    QSettings().setValue("ImageViewer/tools_visible_" + windowTitle(), mToolsWidget->isVisible());
 }
 
 void ImageViewer::toogleInfo()
 {
     mInfo->setVisible(!mInfo->isVisible());
+    QSettings().setValue("ImageViewer/info_visible_" + windowTitle(), mInfo->isVisible());
 }
 
 

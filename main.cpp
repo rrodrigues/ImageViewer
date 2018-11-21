@@ -12,6 +12,10 @@ void testViewer(int argv, char** argc)
     ImageViewer v;
     v.show();
 
+    if (argv > 1) {
+        v.openFile(argc[1]);
+    }
+
     app.exec();
 }
 
@@ -33,7 +37,7 @@ void testOpencv(int argv, char** argc)
 
 int main(int argv, char** argc) {
 
-//    testViewer(argv, argc);
+    testViewer(argv, argc);
 
-    testOpencv(argv, argc);
+//    testOpencv(argv, argc);
 }

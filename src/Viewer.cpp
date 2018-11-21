@@ -4,11 +4,26 @@
 
 #include <QPainter>
 #include <QDebug>
-#include <QMouseEvent>
 
 Viewer::Viewer(QWidget* parent) : QOpenGLWidget(parent)
 {
     setFocusPolicy(Qt::WheelFocus);
+}
+
+void Viewer::setTool(Tool *tool)
+{
+    if (mTool != nullptr && mTool != tool) {
+        mTool->setViewer(nullptr);
+    }
+
+    mTool = tool;
+    if (mTool) {
+        setCursor(mTool->cursor());
+        mTool->setViewer(this);
+    } else {
+        unsetCursor();
+    }
+    update();
 }
 
 void Viewer::setImage(QImage image)
@@ -39,6 +54,12 @@ void Viewer::resetZoom()
 {
     mTranslation.rx() = mTranslation.ry() = 0;
     mZoom = 1.0f / ViewerHelper::computeScale(mImage.size(), size(), mMode);
+    update();
+}
+
+void Viewer::translate(QPointF t)
+{
+    mTranslation += t;
     update();
 }
 
@@ -81,17 +102,8 @@ void Viewer::paintEvent(QPaintEvent * event)
 void Viewer::mousePressEvent(QMouseEvent * event)
 {
     QOpenGLWidget::mousePressEvent(event);
-
-    if (event->modifiers() == Qt::ControlModifier) {
-        mTool = Tools::selection();
-    } else if (event->modifiers() == Qt::NoModifier) {
-        mTool = Tools::move();
-    }
-
     if (mTool) {
-        setCursor(mTool->cursor());
         mTool->mousePressEvent(event);
-        update();
     }
 }
 
@@ -101,17 +113,13 @@ void Viewer::mouseReleaseEvent(QMouseEvent * event)
     if (mTool) {
         mTool->mouseReleaseEvent(event);
     }
-    mTool = nullptr;
-    setCursor(QCursor());
-    update();
 }
 
 void Viewer::mouseMoveEvent(QMouseEvent * event)
 {
     QOpenGLWidget::mouseMoveEvent(event);
     if (mTool) {
-        QPointF delta = mTool->mouseMoveEvent(event);
-        mTranslation += delta;
+        mTool->mouseMoveEvent(event);
         update();
     }
 }

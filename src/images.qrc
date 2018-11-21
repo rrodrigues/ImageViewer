@@ -6,5 +6,6 @@
         <file>images/zoom-in.png</file>
         <file>images/reset-zoom.png</file>
         <file>images/zoom-to-fit.png</file>
+        <file>images/cursor.png</file>
     </qresource>
 </RCC>
